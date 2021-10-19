@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"log"
 	"math/rand"
@@ -80,9 +81,16 @@ func namesHandler(w http.ResponseWriter, r *http.Request) {
 
 	if len(r.Form["start"]) > 0 {
 		names = filter(names, r.Form["start"][0])
+		if len(names) == 0 {
+			sendError(w, http.StatusBadRequest, "none of the names start with the prefix you gave")
+			return
+		}
+	}
+	if n > len(names) {
+		sendError(w, http.StatusBadRequest, fmt.Sprintf("requested more names than available (we have %d available names that satisfy your conditions)", len(names)))
+		return
 	}
 	var randomNames []string
-	// exit := true
 	for i := 0; i < n; i++ {
 		for {
 			random := rand.Intn(len(names))
@@ -92,7 +100,6 @@ func namesHandler(w http.ResponseWriter, r *http.Request) {
 				break
 			}
 		}
-		// exit = true
 	}
 
 	var resp Resp
