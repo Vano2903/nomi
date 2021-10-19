@@ -7,6 +7,7 @@ import (
 	"log"
 	"math/rand"
 	"net/http"
+	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -211,7 +212,13 @@ func main() {
 
 	//log fatal kill the program if listenAndServe returns an error
 
+	//read port from enviroment, if not found will assing 8080 by default
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8080"
+	}
+
 	//listen and serve needs a port and a http handler, in this case there is none
 	//becuse we are using the default http package (http.HandleFunc) so we are giving nil (null) as parameter
-	log.Fatal(http.ListenAndServe(":8080", nil))
+	log.Fatal(http.ListenAndServe(":"+port, nil))
 }

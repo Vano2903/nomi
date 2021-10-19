@@ -7,6 +7,7 @@ import (
 	"log"
 	"math/rand"
 	"net/http"
+	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -203,6 +204,13 @@ func main() {
 	//this root use /{toSearch}, mux allow us to declare url query even like this
 	//to find a name now we need to search /exist/<name> and will handle it normally
 	r.HandleFunc("/exist/{toSearch}", existHandler).Methods("GET")
+
+	//read port from enviroment, if not found will assing 8080 by default
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8080"
+	}
+
 	//listen and serve this time needs r becuse this variable will handle all the requests
-	log.Fatal(http.ListenAndServe(":8080", r))
+	log.Fatal(http.ListenAndServe(":"+port, r))
 }
