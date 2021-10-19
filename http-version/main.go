@@ -52,78 +52,124 @@ func inSlice(list []string, a string) bool {
 }
 
 func namesHandler(w http.ResponseWriter, r *http.Request) {
-	rand.Seed(time.Now().UnixNano())
-	w.Header().Set("Content-Type", "application/json")
+	if r.Method == http.MethodGet {
+		rand.Seed(time.Now().UnixNano())
+		w.Header().Set("Content-Type", "application/json")
 
-	r.ParseForm()
-	if len(r.Form["n"]) <= 0 {
-		sendError(w, http.StatusLengthRequired, "must assign n, bounds are between 2 and 100")
-		return
-	}
-
-	n, err := strconv.Atoi(r.Form["n"][0])
-	if err != nil {
-		sendError(w, http.StatusLengthRequired, "must assign n, bounds are between 2 and 100")
-		return
-	}
-
-	if n < 2 || n > 100 {
-		sendError(w, http.StatusRequestedRangeNotSatisfiable, "n out of bounds, must be between 2 and 100")
-		return
-	}
-
-	file, err := ioutil.ReadFile(fileNamePath)
-	if err != nil {
-		sendError(w, http.StatusInternalServerError, "can't access the database")
-		return
-	}
-	names := strings.Split(strings.Join(strings.Split(string(file), "\n"), ""), "\r")
-
-	if len(r.Form["start"]) > 0 {
-		names = filter(names, r.Form["start"][0])
-		if len(names) == 0 {
-			sendError(w, http.StatusBadRequest, "none of the names start with the prefix you gave")
+		r.ParseForm()
+		if len(r.Form["n"]) <= 0 {
+			sendError(w, http.StatusLengthRequired, "must assign n, bounds are between 2 and 100")
 			return
 		}
-	}
-	if n > len(names) {
-		sendError(w, http.StatusBadRequest, fmt.Sprintf("requested more names than available (we have %d available names that satisfy your conditions)", len(names)))
-		return
-	}
-	var randomNames []string
-	for i := 0; i < n; i++ {
-		for {
-			random := rand.Intn(len(names))
-			check := names[random]
-			if !inSlice(randomNames, check) {
-				randomNames = append(randomNames, check)
-				break
+
+		n, err := strconv.Atoi(r.Form["n"][0])
+		if err != nil {
+			sendError(w, http.StatusLengthRequired, "must assign n, bounds are between 2 and 100")
+			return
+		}
+
+		if n < 2 || n > 100 {
+			sendError(w, http.StatusRequestedRangeNotSatisfiable, "n out of bounds, must be between 2 and 100")
+			return
+		}
+
+		file, err := ioutil.ReadFile(fileNamePath)
+		if err != nil {
+			sendError(w, http.StatusInternalServerError, "can't access the database")
+			return
+		}
+		names := strings.Split(strings.Join(strings.Split(string(file), "\n"), ""), "\r")
+
+		if len(r.Form["start"]) > 0 {
+			names = filter(names, r.Form["start"][0])
+			if len(names) == 0 {
+				sendError(w, http.StatusBadRequest, "none of the names start with the prefix you gave")
+				return
 			}
 		}
+		if n > len(names) {
+			sendError(w, http.StatusBadRequest, fmt.Sprintf("requested more names than available (we have %d available names that satisfy your conditions)", len(names)))
+			return
+		}
+		var randomNames []string
+		for i := 0; i < n; i++ {
+			for {
+				random := rand.Intn(len(names))
+				check := names[random]
+				if !inSlice(randomNames, check) {
+					randomNames = append(randomNames, check)
+					break
+				}
+			}
+		}
+		var resp Resp
+		resp.Error = false
+		resp.Code = http.StatusOK
+		resp.Content = randomNames
+		toSend, _ := json.Marshal(resp)
+		w.Write(toSend)
+		return
 	}
-
-	var resp Resp
-	resp.Error = false
-	resp.Code = http.StatusOK
-	resp.Content = randomNames
-	toSend, _ := json.Marshal(resp)
-	w.Write(toSend)
+	sendError(w, http.StatusMethodNotAllowed, "must use get method")
 }
 
 func nameHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method == http.MethodGet {
+		rand.Seed(time.Now().UnixNano())
+		w.Header().Set("Content-Type", "application/json")
 
+		file, err := ioutil.ReadFile(fileNamePath)
+		if err != nil {
+			sendError(w, http.StatusInternalServerError, "can't access the database")
+			return
+		}
+		names := strings.Split(strings.Join(strings.Split(string(file), "\n"), ""), "\r")
+
+		r.ParseForm()
+		if len(r.Form["start"]) > 0 {
+			names = filter(names, r.Form["start"][0])
+			if len(names) == 0 {
+				sendError(w, http.StatusBadRequest, "none of the names start with the prefix you gave")
+				return
+			}
+		}
+		var resp Resp
+		resp.Error = false
+		resp.Code = http.StatusOK
+		resp.Content = names[rand.Intn(len(names))]
+		toSend, _ := json.Marshal(resp)
+		w.Write(toSend)
+		return
+	}
+	sendError(w, http.StatusMethodNotAllowed, "must use get method")
 }
 
 func existHandler(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-	var resp Resp
-	resp.Content = []string{"ciao", "nya"}
-	toSend, err := json.Marshal(resp)
-	if err != nil {
-		sendError(w, http.StatusInternalServerError, "can't serialize the json")
+	if r.Method == http.MethodGet {
+		w.Header().Set("Content-Type", "application/json")
+
+		r.ParseForm()
+		if len(r.Form["toSearch"]) == 0 {
+			sendError(w, http.StatusBadRequest, "'toSearch' must be defined")
+			return
+		}
+
+		file, err := ioutil.ReadFile(fileNamePath)
+		if err != nil {
+			sendError(w, http.StatusInternalServerError, "can't access the database")
+			return
+		}
+		names := strings.Split(strings.Join(strings.Split(string(file), "\n"), ""), "\r")
+
+		var resp Resp
+		resp.Code = http.StatusOK
+		resp.Content = inSlice(names, r.Form["toSearch"][0])
+		resp.Error = false
+		toSend, _ := json.Marshal(resp)
+		w.Write(toSend)
 		return
 	}
-	w.Write(toSend)
+	sendError(w, http.StatusMethodNotAllowed, "must use get method")
 }
 
 func main() {
