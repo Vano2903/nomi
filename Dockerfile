@@ -1,4 +1,4 @@
-FROM golang:1.16
+FROM golang:1.16.4
 
 ENV APP_NAME nomi_mux
 ENV PORT 8080
